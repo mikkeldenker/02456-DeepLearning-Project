@@ -1,6 +1,6 @@
 import os
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw
 import xml.etree.ElementTree as ET
 
 
@@ -15,18 +15,20 @@ class ColaBeerDataset(torch.utils.data.Dataset):
     def __init__(self, folder_path, transforms = None):
         self.path = folder_path
         self.transforms = transforms
-        self.files = sorted(os.listdir(os.path.join(self.path, "Annotations")))
-
+        self.files = list(sorted(os.listdir(os.path.join(self.path, "Annotations"))))
+        self.imgs  = list(sorted(os.listdir(os.path.join(self.path, "Images"))))
     def __len__(self):
+        print(len(self.files))
         return len(self.files)
 
     def __getitem__(self, idx: int):
         annotation_path = os.path.join(self.path, "Annotations", self.files[idx])
+        img_path = os.path.join(self.path, "Images", self.imgs[idx])
         tree = ET.parse(annotation_path)
         root = tree.getroot()
 
         frame_file_name = root.findall("filename")[0].text
-        img = None # TODO: actually open image
+        img = Image.open(img_path).convert("RGB") # TODO: actually open image
 
         targets = {
                 "boxes": [],
@@ -53,12 +55,20 @@ class ColaBeerDataset(torch.utils.data.Dataset):
             targets['labels'].append(label)
             targets['area'].append(area)
 
-        targets = {k: torch.tensor(v) for (k, v) in targets.items()}
-
+        #targets = {k: torch.tensor(v) for (k, v) in targets.items()} # for the test in the bottom this needs to be outcommented
+                                                                      # As you cannot plot tensor bb boxes.                      
         return img, targets
 
 
 if __name__ == '__main__':
     from pprint import pprint
-    dataset = ColaBeerDataset("data/frames_480_663")
-    pprint(dataset[490])
+    i=1705
+    dataset = ColaBeerDataset("../../data/")
+    image_anno=dataset[i][0]
+    img_bbox = ImageDraw.Draw(image_anno)
+    for bbox in dataset[i][1]["boxes"]:
+        
+        img_bbox.rectangle(bbox, outline="green") 
+    
+image_anno.show()
+
