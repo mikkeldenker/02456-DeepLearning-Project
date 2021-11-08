@@ -2,7 +2,7 @@ import os
 import torch
 from PIL import Image, ImageDraw
 import xml.etree.ElementTree as ET
-
+import numpy as np
 
 LABELS = {
         "beer": 1,
@@ -29,7 +29,10 @@ class ColaBeerDataset(torch.utils.data.Dataset):
 
         frame_file_name = root.findall("filename")[0].text
         img = Image.open(img_path).convert("RGB") # TODO: actually open image
-
+        img = np.array(img)
+        img = torch.tensor(img)/255
+        img = img.permute(2,0,1)
+        
         targets = {
                 "boxes": [],
                 "labels": [],
@@ -37,11 +40,13 @@ class ColaBeerDataset(torch.utils.data.Dataset):
                 }
 
         image_objects = root.findall("object")
-
+        if len(image_objects)==0:
+            targets['boxes'] = torch.zeros((0, 4), dtype=torch.float32)
+            targets['labels'].append(0)
+            targets['area'].append(0)
         for obj in image_objects:
             name = obj.findall("name")[0].text
             bbox = obj.findall("bndbox")[0]
-
             xmin = float(bbox.findall('xmin')[0].text)
             ymin = float(bbox.findall('ymin')[0].text)
             xmax = float(bbox.findall('xmax')[0].text)
@@ -55,20 +60,20 @@ class ColaBeerDataset(torch.utils.data.Dataset):
             targets['labels'].append(label)
             targets['area'].append(area)
 
-        #targets = {k: torch.tensor(v) for (k, v) in targets.items()} # for the test in the bottom this needs to be outcommented
-                                                                      # As you cannot plot tensor bb boxes.                      
+        targets = {k: torch.tensor(v) for (k, v) in targets.items()} # for the test in the bottom this needs to be outcommented
+        print(targets["boxes"].shape)                                                           # As you cannot plot tensor bb boxes.                      
         return img, targets
 
 
-if __name__ == '__main__':
-    from pprint import pprint
-    i=1190
-    dataset = ColaBeerDataset("../../data/")
-    image_anno=dataset[i][0]
-    img_bbox = ImageDraw.Draw(image_anno)
-    for bbox in dataset[i][1]["boxes"]:
+#if __name__ == '__main__':
+    # from pprint import pprint
+    # i=1190
+    # dataset = ColaBeerDataset("../../data/")
+    # image_anno=dataset[i][0]
+    # img_bbox = ImageDraw.Draw(image_anno)
+    # for bbox in dataset[i][1]["boxes"]:
         
-        img_bbox.rectangle(bbox, outline="green") 
+    #     img_bbox.rectangle(bbox, outline="green") 
     
-image_anno.show()
+    # image_anno.show()
 
