@@ -18,7 +18,7 @@ class ColaBeerDataset(torch.utils.data.Dataset):
         self.files = list(sorted(os.listdir(os.path.join(self.path, "Annotations"))))
         self.imgs  = list(sorted(os.listdir(os.path.join(self.path, "Images"))))
     def __len__(self):
-        print(len(self.files))
+
         return len(self.files)
 
     def __getitem__(self, idx: int):
@@ -62,7 +62,7 @@ class ColaBeerDataset(torch.utils.data.Dataset):
 
 if __name__ == '__main__':
     from pprint import pprint
-    i=1705
+    i=1190
     dataset = ColaBeerDataset("../../data/")
     image_anno=dataset[i][0]
     img_bbox = ImageDraw.Draw(image_anno)
