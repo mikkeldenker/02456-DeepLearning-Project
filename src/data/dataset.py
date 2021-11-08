@@ -16,19 +16,18 @@ class ColaBeerDataset(torch.utils.data.Dataset):
         self.path = folder_path
         self.transforms = transforms
         self.files = list(sorted(os.listdir(os.path.join(self.path, "Annotations"))))
-        self.imgs  = list(sorted(os.listdir(os.path.join(self.path, "Images"))))
-    def __len__(self):
 
+    def __len__(self):
         return len(self.files)
 
     def __getitem__(self, idx: int):
         annotation_path = os.path.join(self.path, "Annotations", self.files[idx])
-        img_path = os.path.join(self.path, "Images", self.imgs[idx])
         tree = ET.parse(annotation_path)
         root = tree.getroot()
 
-        frame_file_name = root.findall("filename")[0].text
-        img = Image.open(img_path).convert("RGB") # TODO: actually open image
+        frame_file_name = root.findall("filename")[0].text.lower()
+        img_path = os.path.join(self.path, "Images", frame_file_name)
+        img = Image.open(img_path).convert("RGB")
         img = np.array(img)
         img = torch.tensor(img)/255
         img = img.permute(2,0,1)
