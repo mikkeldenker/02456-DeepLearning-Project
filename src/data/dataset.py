@@ -65,15 +65,19 @@ class ColaBeerDataset(torch.utils.data.Dataset):
         return img, targets
 
 
-#if __name__ == '__main__':
-    # from pprint import pprint
-    # i=1190
-    # dataset = ColaBeerDataset("../../data/")
-    # image_anno=dataset[i][0]
-    # img_bbox = ImageDraw.Draw(image_anno)
-    # for bbox in dataset[i][1]["boxes"]:
+
+if __name__ == '__main__':
+    from pprint import pprint
+    i=680
+    dataset = ColaBeerDataset("../../data/train")
+    image_anno=dataset[i][0]
+    img_bbox = ImageDraw.Draw(image_anno)
+    for bbox in dataset[i][1]["boxes"]:
+
         
-    #     img_bbox.rectangle(bbox, outline="green") 
+         img_bbox.rectangle(bbox, outline="green") 
     
-    # image_anno.show()
+
+    image_anno.show()
+
 
