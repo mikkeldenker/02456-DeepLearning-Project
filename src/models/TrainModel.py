@@ -60,7 +60,7 @@ class trainandeval(object):
         # and a learning rate scheduler
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                        step_size=3,
-                                                       gamma=0.1) 
+                                                       gamma=1) 
         
         
         ########## Train the actual model ###############
@@ -71,7 +71,7 @@ class trainandeval(object):
             # update the learning rate
             lr_scheduler.step()
             # evaluate on the test dataset
-            # evaluate(model, data_loader_val, device=device)
+            evaluate(model, data_loader_val, device=device)
 
         return model
 if __name__ == "__main__":
