@@ -36,6 +36,8 @@ class ColaBeerDataset(torch.utils.data.Dataset):
                 "boxes": [],
                 "labels": [],
                 "area": [],
+                'image_id': idx,
+                'iscrowd': [],
                 }
 
         image_objects = root.findall("object")
@@ -43,6 +45,8 @@ class ColaBeerDataset(torch.utils.data.Dataset):
             targets['boxes'] = torch.zeros((0, 4), dtype=torch.float32)
             targets['labels'].append(0)
             targets['area'].append(0)
+            targets['iscrowd'].append(False)
+
         for obj in image_objects:
             name = obj.findall("name")[0].text
             bbox = obj.findall("bndbox")[0]
@@ -58,9 +62,9 @@ class ColaBeerDataset(torch.utils.data.Dataset):
             targets['boxes'].append([xmin, ymin, xmax, ymax])
             targets['labels'].append(label)
             targets['area'].append(area)
+            targets['iscrowd'].append(False)
 
-        targets = {k: torch.tensor(v) for (k, v) in targets.items()} # for the test in the bottom this needs to be outcommented
-        print(targets["boxes"].shape)                                                           # As you cannot plot tensor bb boxes.                      
+        targets = {k: torch.tensor(v) if not isinstance(v, torch.Tensor) else v for (k, v) in targets.items()} # for the test in the bottom this needs to be outcommented
         return img, targets
 
 

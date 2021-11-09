@@ -8,23 +8,17 @@ import torchvision
 import torch
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
-from src.data.dataset import ColaBeerDataset
-import utils
-from engine import train_one_epoch, evaluate
+import src.models.utils as utils
+from src.models.engine import train_one_epoch, evaluate
 
 class trainandeval(object):
 
-    def train(self):
+    def train(self, dataset, num_epochs=1):
         torch.manual_seed(100)
         num_classes=3
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-                
-        ######## Dataset ########################
-        #Specify location of training data and load the data using dataloader
-        data_location = "../../data/train"
-        dataset=ColaBeerDataset(data_location)
-        
-        
+        print(f"Training on {device}")
+
         # split the dataset in train and test set
         indices = torch.randperm(len(dataset)).tolist()
         dataset_train = torch.utils.data.Subset(dataset, indices[:-int(len(dataset)*(4/5))+1])
@@ -70,7 +64,6 @@ class trainandeval(object):
         
         
         ########## Train the actual model ###############
-        num_epochs = 1
 
         for epoch in range(num_epochs):
             # train for one epoch, printing every 10 iterations
@@ -78,6 +71,8 @@ class trainandeval(object):
             # update the learning rate
             lr_scheduler.step()
             # evaluate on the test dataset
-            evaluate(model, data_loader_val, device=device)
+            # evaluate(model, data_loader_val, device=device)
+
+        return model
 if __name__ == "__main__":
     trainandeval()
