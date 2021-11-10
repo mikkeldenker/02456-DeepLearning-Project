@@ -11,3 +11,8 @@ python-dotenv>=0.5.1
 pillow==8.4.0
 torch==1.10.0
 numpy
+torchvision
+utils
+pycocotools
+opencv-python==4.5.4.58
+
