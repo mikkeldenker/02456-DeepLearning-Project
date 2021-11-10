@@ -33,9 +33,13 @@ if __name__ == "__main__":
             frame = cv2.flip(frame, 1)
 
             frame = np.array(frame)
-            tensor = torch.tensor(frame).permute(2, 0, 1)
+            frame = frame[:, :, ::-1]
+            tensor = torch.tensor(frame.copy()).permute(2, 0, 1)
             tensor = tensor / 255
+            print(tensor.shape)
             pred = model([tensor])[0]
+            print(pred)
+            frame = frame[:, :, ::-1]
 
             for i, box in enumerate(pred['boxes']):
                 xmin, ymin, xmax, ymax = box
