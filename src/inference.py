@@ -19,7 +19,7 @@ if __name__ == "__main__":
                        num_classes=3,
                        rpn_anchor_generator=anchor_generator,
                        box_roi_pool=roi_pooler)
-    model.load_state_dict(torch.load("../model.pth"))
+    model.load_state_dict(torch.load("../models/model.pth"))
     model.eval()
 
     with torch.no_grad():
