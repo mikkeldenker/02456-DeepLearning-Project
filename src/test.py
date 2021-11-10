@@ -23,14 +23,17 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load("../model.pth"))
     model.eval()
 
-    dataset=ColaBeerDataset("../data/train")
+    dataset = ColaBeerDataset("../data/test")
+    # dataset = torch.utils.data.Subset(dataset, list(range(680, 1200)))
 
     with torch.no_grad():
         for frame, _ in dataset:
             frame = np.array(frame)
+            print(frame.shape)
             tensor = torch.tensor(frame)
-            tensor = tensor / 255
+            # tensor = tensor / 255
             pred = model([tensor])[0]
+            print(pred)
             frame = frame.transpose(1, 2, 0)
 
             for i, box in enumerate(pred['boxes']):
