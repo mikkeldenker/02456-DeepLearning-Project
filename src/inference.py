@@ -7,19 +7,20 @@ import numpy as np
 
 
 if __name__ == "__main__":
-    backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-    backbone.out_channels = 1280
-    anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
-                                       aspect_ratios=((0.5, 1.0, 2.0),))
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
-                                                    output_size=7,
-                                                    sampling_ratio=2)
-# put the pieces together inside a FasterRCNN model
-    model = FasterRCNN(backbone,
-                       num_classes=3,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler)
-    model.load_state_dict(torch.load("../model.pth"))
+    # backbone = torchvision.models.mobilenet_v2(pretrained=True).features
+    # backbone.out_channels = 1280
+    # anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
+    #                                    aspect_ratios=((0.5, 1.0, 2.0),))
+    # roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
+    #                                                 output_size=7,
+    #                                                 sampling_ratio=2)
+# pu# t the pieces together inside a FasterRCNN model
+    # model = FasterRCNN(backbone,
+    #                    num_classes=3,
+    #                    rpn_anchor_generator=anchor_generator,
+    #                    box_roi_pool=roi_pooler)
+    # model.load_state_dict(torch.load("../model.pth"))
+    model = torch.jit.load("../traced.pth")
     model.eval()
 
     with torch.no_grad():
@@ -41,7 +42,7 @@ if __name__ == "__main__":
             print(pred)
             frame = frame[:, :, ::-1]
 
-            for i, box in enumerate(pred['boxes']):
+            for i, box in enumerate(pred.get('boxes', [])):
                 xmin, ymin, xmax, ymax = box
                 xmin = int(xmin)
                 xmax = int(xmax)
