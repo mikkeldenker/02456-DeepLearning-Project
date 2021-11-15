@@ -21,4 +21,4 @@ if __name__=='__main__':
     
     m=TrainModel.trainandeval()
     
-    m.train(dataset)
+    m.train(dataset,num_epochs=2,model="resnet50")
