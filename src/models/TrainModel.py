@@ -44,7 +44,7 @@ class trainandeval(object):
         
         
         ######### load a model pre-trained on COCO ############
-        assert model=="mobilev2" or model=="resnet50" , 'select either "resnet50" or "mobilev2"' 
+        assert model in ["mobilev2", "resnet50"] , 'select either "resnet50" or "mobilev2"' 
         print(f'Training using {model}')
         if model=="mobilev2":
             backbone = torchvision.models.mobilenet_v2(pretrained=True).features
@@ -64,7 +64,22 @@ class trainandeval(object):
             num_classes = 3 # cola and beer + background
             in_features = model.roi_heads.box_predictor.cls_score.in_features
             model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-                
+        elif model == 'mobilev3':
+            backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
+            backbone.out_channels = 576
+            anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
+                                               aspect_ratios=((0.5, 1.0, 2.0),))
+            roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
+                                                            output_size=7,
+                                                            sampling_ratio=2)
+            # put the pieces together inside a FasterRCNN model
+            model = FasterRCNN(backbone,
+                       num_classes=3,
+                       rpn_anchor_generator=anchor_generator,
+                       box_roi_pool=roi_pooler,
+                       min_size=220,
+                       max_size=220,
+                       )
         model.to(device)
         ###########################################################
         
