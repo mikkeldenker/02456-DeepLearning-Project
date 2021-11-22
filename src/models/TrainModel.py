@@ -38,8 +38,8 @@ class trainandeval(object):
         
         
         ######### load a model pre-trained on COCO ############
-        backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-        backbone.out_channels = 1280
+        backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
+        backbone.out_channels = 576
         anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
                                            aspect_ratios=((0.5, 1.0, 2.0),))
         roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
@@ -47,9 +47,12 @@ class trainandeval(object):
                                                         sampling_ratio=2)
         # put the pieces together inside a FasterRCNN model
         model = FasterRCNN(backbone,
-                           num_classes=num_classes,
-                           rpn_anchor_generator=anchor_generator,
-                           box_roi_pool=roi_pooler)
+                   num_classes=3,
+                   rpn_anchor_generator=anchor_generator,
+                   box_roi_pool=roi_pooler,
+                   min_size=220,
+                   max_size=220,
+                   )
         model.to(device)
         ###########################################################
         
