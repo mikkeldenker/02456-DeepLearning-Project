@@ -6,11 +6,13 @@ from torchvision.ops import nms
 import cv2
 import numpy as np
 from data.dataset import ColaBeerDataset, Combined
-from models.centroid_tracking import CentroidTracker
 import time
 import math
+import json
+from tqdm import tqdm
 
 torch.backends.quantized.engine = 'qnnpack'
+output_file = "inference_speed.json"
 
 if __name__ == "__main__":
     # backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
@@ -29,7 +31,7 @@ if __name__ == "__main__":
                        box_roi_pool=roi_pooler,
                        min_size=220,
                        max_size=220,
-                       rpn_score_thresh=0.1,
+                       rpn_score_thresh=0.5,
                        )
     model.load_state_dict(torch.load("../model_v3_large.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
@@ -37,12 +39,11 @@ if __name__ == "__main__":
     model.eval()
 
     torch.manual_seed(100)
-    # dataset = Combined(['../data/train', '../data/test'])
-    # train_percent = 0.8
-    # _, dataset = torch.utils.data.random_split(dataset, [math.ceil(len(dataset)*train_percent), math.floor((1-train_percent)*len(dataset))])
+    dataset = Combined(['../data/train', '../data/test'])
+    train_percent = 0.8
+    _, dataset = torch.utils.data.random_split(dataset, [math.ceil(len(dataset)*train_percent), math.floor((1-train_percent)*len(dataset))])
 
-    # dataset = torch.utils.data.Subset(dataset, list(range(0, 200)))
-    dataset = ColaBeerDataset('../data/test')
+    # dataset = torch.utils.data.Subset(dataset, list(range(0, 20)))
 
     # data for text
     # Window name in which image is displayed
@@ -57,16 +58,12 @@ if __name__ == "__main__":
     color = (255, 0, 0)
     # Line thicknes
     thickness = 2
-    out = None
-    tracker = CentroidTracker(20, 100)
+
+    deltas = []
     with torch.no_grad():
-        for frame, _ in dataset:
+        for frame, _ in tqdm(dataset):
             t1_start = time.time()
-                
-            if out is None:
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v') # Be sure to use the lower case
-                out = cv2.VideoWriter('output.mp4', fourcc, 20, (frame.shape[1], frame.shape[0]))
-            
+
             tensor = torch.tensor(frame)
 
             pred = model([tensor])[0]
@@ -83,14 +80,8 @@ if __name__ == "__main__":
             boxes = [boxes[idx] for idx in nms_tensor]
             labels = [labels[idx] for idx in nms_tensor]
             scores = [scores[idx] for idx in nms_tensor]
-            tracker.update(boxes)
 
             frame = (frame*255).astype(np.uint8)
-
-            for obj_id, centroid in tracker.objects():
-                print(obj_id, centroid)
-                frame = cv2.circle(frame, centroid, radius=0, color=(255,127,80), thickness=10)
-                frame = cv2.putText(frame, str(obj_id), centroid, cv2.FONT_HERSHEY_SIMPLEX, 1, (255,127,80), 2)
             for (i, box) in enumerate(boxes):
                 #box = pred['boxes'][i]
                 xmin, ymin, xmax, ymax = box
@@ -109,17 +100,10 @@ if __name__ == "__main__":
           
             
             # Display the resulting frame
-            color = (255, 127, 80)
-            t1_end = time.time()
-            frame = cv2.putText(np.array(frame), 'Current render time: {:.2f}'.format(t1_end-t1_start), org, font, fontScale, color, thickness, cv2.LINE_AA)
             frame = frame[:, :, ::-1]
-            out.write(frame)
-            cv2.imshow('frame', frame)
-            print('Elapsed time for current rendering: {:.2f}'.format(t1_end-t1_start))
+            t1_end = time.time()
+            deltas.append(t1_end - t1_start)
 
-            # the 'q' button is set as the
-            # quitting button you may use any
-            # desired button of your choice
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-out.release()
+
+with open(output_file, 'w') as f:
+    json.dump(deltas, f)
