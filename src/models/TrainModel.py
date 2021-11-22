@@ -27,8 +27,8 @@ class trainandeval(object):
         #
         # split the dataset in train and test set
         indices = torch.randperm(len(dataset)).tolist()
-        dataset_train = torch.utils.data.Subset(dataset, indices[:-int(len(dataset)*(4/5))+1])
-        dataset_val = torch.utils.data.Subset(dataset, indices[-int(len(dataset)*(1/5))+1:])
+        dataset_train = torch.utils.data.Subset(dataset, indices[:int(len(dataset)*(4/5))+1])
+        dataset_val = torch.utils.data.Subset(dataset, indices[int(len(dataset)*(/45))+1:])
         
         
         # Specify data loaders
