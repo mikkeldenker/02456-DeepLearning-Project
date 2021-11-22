@@ -5,8 +5,9 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.ops import nms
 import cv2
 import numpy as np
-from data.dataset import ColaBeerDataset
+from data.dataset import ColaBeerDataset, Combined
 import time
+import math
 
 torch.backends.quantized.engine = 'qnnpack'
 
@@ -27,15 +28,19 @@ if __name__ == "__main__":
                        box_roi_pool=roi_pooler,
                        min_size=220,
                        max_size=220,
-                       rpn_score_thresh=0.7,
+                       rpn_score_thresh=0.5,
                        )
     model.load_state_dict(torch.load("../model_v3_large.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
 
     model.eval()
 
-    dataset = ColaBeerDataset("../data/test")
-    # dataset = torch.utils.data.Subset(dataset, list(range(680, 1200)))
+    torch.manual_seed(100)
+    dataset = Combined(['../data/train', '../data/test'])
+    train_percent = 0.8
+    _, dataset = torch.utils.data.random_split(dataset, [math.ceil(len(dataset)*train_percent), math.floor((1-train_percent)*len(dataset))])
+
+    dataset = torch.utils.data.Subset(dataset, list(range(0, 200)))
 
     # data for text
     # Window name in which image is displayed
@@ -50,7 +55,7 @@ if __name__ == "__main__":
     color = (255, 0, 0)
     # Line thicknes
     thickness = 2
-
+    out = None
     with torch.no_grad():
         for frame, _ in dataset:
             t1_start = time.time()
@@ -58,9 +63,11 @@ if __name__ == "__main__":
             
             # Need to transpose to rescale
             frame = np.array(frame).transpose(1,2,0)      
+
+            if out is None:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v') # Be sure to use the lower case
+                out = cv2.VideoWriter('output.mp4', fourcc, 20, (frame.shape[1], frame.shape[0]))
             
-            # get dimensions to resize the image 
-            cv2.imshow('frame', frame)
             # transpose back
             frame = frame.transpose(2,0,1)
                         
@@ -81,6 +88,7 @@ if __name__ == "__main__":
             labels = [labels[idx] for idx in nms_tensor]
             scores = [scores[idx] for idx in nms_tensor]
 
+            frame = (frame*255).astype(np.uint8)
             for (i, box) in enumerate(boxes):
                 #box = pred['boxes'][i]
                 xmin, ymin, xmax, ymax = box
@@ -102,6 +110,7 @@ if __name__ == "__main__":
             frame = frame[:, :, ::-1]
             t1_end = time.time()
             frame = cv2.putText(np.array(frame), 'Current render time: {:.2f}'.format(t1_end-t1_start), org, font, fontScale, color, thickness, cv2.LINE_AA)
+            out.write(frame)
             cv2.imshow('frame', frame)
             print('Elapsed time for current rendering: {:.2f}'.format(t1_end-t1_start))
 
@@ -110,3 +119,4 @@ if __name__ == "__main__":
             # desired button of your choice
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+out.release()

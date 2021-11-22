@@ -78,7 +78,6 @@ class Combined(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         current_idx = 0
 
-        print(idx)
         while len(self._datasets[current_idx]) <= idx:
             idx -= len(self._datasets[current_idx])
             current_idx += 1

@@ -6,3 +6,4 @@ data/*
 __pycache__
 *.pth
 *.zip
+*.mp4
