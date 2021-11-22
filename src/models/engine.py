@@ -67,21 +67,24 @@ def _get_iou_types(model):
         iou_types.append("keypoints")
     return iou_types
 
-# @torch.inference_mode()
-# def evaluate(model, data_loader, device):
-#     total_losses = {}
+@torch.inference_mode()
+def evaluate_mik(model, data_loader, epoch, device, print_freq):
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    header = f"Epoch: [{epoch}]"
+    
+    for images, targets in metric_logger.log_every(data_loader, print_freq, header):
+        images = [image.to(device) for image in images]
+        targets = [{k: v.to(device) for (k, v) in t.items()} for t in targets]
+        loss_dict = model(images, targets)
+        
+        losses = sum(loss for loss in loss_dict.values())
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = utils.reduce_dict(loss_dict)
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
 
-#     for images, targets in data_loader:
-#         images = [image.to(device) for image in images]
-#         targets = [{k: v.to(device) for (k, v) in t.items()} for t in targets]
-#         pred = model(images, targets)
-#         for loss_type in pred:
-#             if not loss_type in total_losses:
-#                 total_losses[loss_type] = torch.tensor(0.0).to(device)
-#             total_losses[loss_type] += pred[loss_type]
-
-#     print('Total validation loss:')
-#     print(total_losses)
+        loss_value = losses_reduced.item()
+        metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
+    return loss_value
 
 @torch.inference_mode()
 def evaluate(model, data_loader, device):
