@@ -25,7 +25,6 @@ if __name__ == "__main__":
                    box_roi_pool=roi_pooler,
                    min_size=220,
                    max_size=220,
-                   rpn_nms_thresh=0.7,
                    rpn_score_thresh=0.2,
                    )
     model.load_state_dict(torch.load("../model_v3.pth"))

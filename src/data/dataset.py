@@ -68,17 +68,25 @@ class ColaBeerDataset(torch.utils.data.Dataset):
         return img, targets
 
 
+class Combined(torch.utils.data.Dataset):
+    def __init__(self, paths):
+        self._datasets = [ColaBeerDataset(p) for p in paths]
+
+    def __len__(self):
+        return sum([len(subset) for subset in self._datasets])
+
+    def __getitem__(self, idx):
+        current_idx = 0
+
+        print(idx)
+        while len(self._datasets[current_idx]) <= idx:
+            idx -= len(self._datasets[current_idx])
+            current_idx += 1
+
+        return self._datasets[current_idx][idx]
 
 if __name__ == '__main__':
-    from pprint import pprint
-    i=680
-    dataset = ColaBeerDataset("../../data/train")
-    image_anno=dataset[i][0]
-    img_bbox = ImageDraw.Draw(image_anno)
-    for bbox in dataset[i][1]["boxes"]:
-
-        
-         img_bbox.rectangle(bbox, outline="green") 
-    
-
-    image_anno.show()
+    combined = Combined(['../../data/train', '../../data/test'])
+    train_percent = 0.8
+    train_dataset, val_dataset = torch.utils.data.random_split(combined, [math.ceil(len(combined)*train_percent), math.floor((1-train_percent)*len(combined))])
+    print(train_dataset)

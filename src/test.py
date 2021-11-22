@@ -2,7 +2,7 @@ import torchvision
 import torch
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
-from torchvision.ops import batched_nms
+from torchvision.ops import nms
 import cv2
 import numpy as np
 from data.dataset import ColaBeerDataset
@@ -11,8 +11,10 @@ import time
 torch.backends.quantized.engine = 'qnnpack'
 
 if __name__ == "__main__":
-    backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
-    backbone.out_channels = 576
+    # backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
+    backbone = torchvision.models.mobilenet_v3_large(pretrained=True).features
+    # backbone.out_channels = 576
+    backbone.out_channels = 960
     anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
                                        aspect_ratios=((0.5, 1.0, 2.0),))
     roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
@@ -25,18 +27,16 @@ if __name__ == "__main__":
                        box_roi_pool=roi_pooler,
                        min_size=220,
                        max_size=220,
-                       rpn_nms_thresh=0.7,
-                       rpn_score_thresh=0.05,
+                       rpn_score_thresh=0.7,
                        )
-    model.load_state_dict(torch.load("../model_v3.pth"))
+    model.load_state_dict(torch.load("../model_v3_large.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
+
     model.eval()
 
     dataset = ColaBeerDataset("../data/test")
     # dataset = torch.utils.data.Subset(dataset, list(range(680, 1200)))
 
-    # Scale percentage for inference
-    scale_percentage = 100
     # data for text
     # Window name in which image is displayed
     window_name = 'Image'
@@ -60,11 +60,7 @@ if __name__ == "__main__":
             frame = np.array(frame).transpose(1,2,0)      
             
             # get dimensions to resize the image 
-            width = int(frame.shape[1]*scale_percentage/100)
-            height = int(frame.shape[0]*scale_percentage/100)
-            dim = (width, height)
             cv2.imshow('frame', frame)
-            frame = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
             # transpose back
             frame = frame.transpose(2,0,1)
                         
@@ -75,14 +71,17 @@ if __name__ == "__main__":
             frame = frame.transpose(1, 2, 0)
 
             # NMS on bounding boxes
-            #boxes = pred.get('boxes', [])
-            #scores = pred.get('scores', [])
-            #labels = pred.get('labels', [])
-            #iou_thresh = 0.99
-            #nms_tensor = batched_nms(boxes, scores, labels, iou_thresh)
-            #print(nms_tensor)
+            boxes = pred.get('boxes', [])
+            scores = pred.get('scores', [])
+            labels = pred.get('labels', [])
+            iou_thresh = 0.05
+            nms_tensor = nms(boxes, scores, iou_thresh)
 
-            for (i, box) in enumerate(pred.get('boxes', [])):
+            boxes = [boxes[idx] for idx in nms_tensor]
+            labels = [labels[idx] for idx in nms_tensor]
+            scores = [scores[idx] for idx in nms_tensor]
+
+            for (i, box) in enumerate(boxes):
                 #box = pred['boxes'][i]
                 xmin, ymin, xmax, ymax = box
                 xmin = int(xmin)
@@ -90,9 +89,7 @@ if __name__ == "__main__":
                 ymin = int(ymin)
                 ymax = int(ymax)
 
-                print(xmin, ymin, xmax, ymax)
-
-                label = int(pred['labels'][i])
+                label = int(labels[i])
                 if label == 1:
                     color = (0, 255, 0)
                 else:
