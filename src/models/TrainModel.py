@@ -11,8 +11,8 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torch.utils.tensorboard import SummaryWriter
 import src.models.utils as utils
-from src.models.engine import train_one_epoch, evaluate
-
+from src.models.engine import train_one_epoch, evaluate, evaluate_mik
+import pickle
 class trainandeval(object):
 
     def train(self, dataset, num_epochs=1,model="mobilev2"):
@@ -79,20 +79,36 @@ class trainandeval(object):
         
         
         ########## Train the actual model ###############
-
+        train_loss={}
+        val_loss={}
+        val_acc={}
         for epoch in range(num_epochs):
             # train for one epoch, printing every 10 iterations
             metric_logger=train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=10)
             TL = metric_logger.loss.total #total loss
             count = metric_logger.loss.count
             SL = float(TL / count) #single loss or average loss
-            writer.add_scalar("Training loss", SL, epoch)
+            train_loss.append(SL)
             # update the learning rate
             lr_scheduler.step()
-            # evaluate on the test dataset
-            evaluation_result=evaluate(model, data_loader_val, device=device)
+            # evaluate on the test dataset validation acc
+            evaluation_result=evaluate(model, data_loader_val, device=device)          
             test_accuracy = evaluation_result.coco_eval.get("bbox").stats[0]
-            writer.add_scalar("Validation loss", test_accuracy, epoch)
+            val_acc.append(test_accuracy)
+            #validation loss
+            test_metric=evaluate_mik(model,data_loader_val,epoch,device=device,print_freq=1)
+            VL = test_metric.loss.total #total loss
+            count = test_metric.loss.count
+            VSL = float(VL / count) #single loss or average loss
+            val_loss.append(VSL)
+            print(val_loss)
+        with open("val_loss.txt", "wb") as fp:   #Pickling
+          pickle.dump(val_loss, fp)
+        with open("train_loss.txt", "wb") as fp:   #Pickling
+          pickle.dump(train_loss, fp)
+        with open("val_acc.txt", "wb") as fp:   #Pickling
+          pickle.dump(val_acc, fp)
+            
             
             
         return model
