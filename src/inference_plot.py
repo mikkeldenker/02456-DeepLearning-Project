@@ -11,6 +11,7 @@ for model in all_deltas:
     deltas = all_deltas[model]
     data.append(deltas)
     labels.append(model)
+    print(model, np.median(all_deltas[model]))
 
 plt.boxplot(data)
 plt.ylabel("Inference Speed (sec)")

@@ -9,6 +9,8 @@ import time
 
 torch.backends.quantized.engine = 'qnnpack'
 
+THRESH = 0.8
+
 if __name__ == "__main__":
     #model = torch.jit.load("../traced.pth")
     backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
@@ -27,7 +29,7 @@ if __name__ == "__main__":
                    max_size=220,
                    rpn_score_thresh=0.2,
                    )
-    model.load_state_dict(torch.load("../models/model_v3.pth"))
+    model.load_state_dict(torch.load("../models/model_v3_small.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
     # model = torch.jit.script(model)
     #model.half()
@@ -75,7 +77,10 @@ if __name__ == "__main__":
             pred = model([tensor])[0]
             frame = frame[:, :, ::-1]
 
-            for i, box in enumerate(pred.get('boxes', [])):
+            for i, (score, box) in enumerate(zip(pred.get('scores', []), pred.get('boxes', []))):
+                if score < THRESH:
+                    continue
+
                 xmin, ymin, xmax, ymax = box
                 xmin = int(xmin)
                 xmax = int(xmax)

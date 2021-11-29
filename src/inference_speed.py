@@ -11,6 +11,7 @@ import time
 import math
 import json
 from tqdm import tqdm
+import os
 
 torch.backends.quantized.engine = 'qnnpack'
 output_file = "inference_speed.json"
@@ -18,12 +19,16 @@ output_file = "inference_speed.json"
 if __name__ == "__main__":
     all_deltas = {}
 
-    for model_name in ['resnet', 'mobilenet_v3']:
-        if model_name == 'mobilenet_v3':
-            # backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
-            backbone = torchvision.models.mobilenet_v3_large(pretrained=True).features
-            # backbone.out_channels = 576
-            backbone.out_channels = 960
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
+            all_deltas = json.loads(f.read())
+
+    for model_name in ['resnet', 'mobilenet_v3', 'mobilenet_v3_quant']:
+        if 'mobilenet_v3' in model_name:
+            backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
+            # backbone = torchvision.models.mobilenet_v3_large(pretrained=True).features
+            backbone.out_channels = 576
+            # backbone.out_channels = 960
             anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
                                                aspect_ratios=((0.5, 1.0, 2.0),))
             roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
@@ -36,9 +41,9 @@ if __name__ == "__main__":
                                box_roi_pool=roi_pooler,
                                min_size=220,
                                max_size=220,
-                               rpn_score_thresh=0.5,
+                               rpn_score_thresh=0.3,
                                )
-            model.load_state_dict(torch.load("../models/model_v3_large.pth"))
+            model.load_state_dict(torch.load("../models/model_v3_small.pth"))
         elif model_name == 'resnet':
             model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
             num_classes = 3 # cola and beer + background
@@ -46,7 +51,8 @@ if __name__ == "__main__":
             model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
             model.load_state_dict(torch.load("../models/model_resnet50_10epoch.pth"))
 
-        model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
+        if 'quant' in model_name:
+            model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
         model.eval()
 
         torch.manual_seed(100)
