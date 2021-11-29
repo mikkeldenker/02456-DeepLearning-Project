@@ -16,7 +16,7 @@ if __name__=='__main__':
     ######## Dataset ########################
     #Specify location of training data and load the data using dataloader
     data_location = "../../data/train"
-    dataset=ColaBeerDataset(data_location)
+    dataset=ColaBeerDataset(data_location, True)
     # dataset = torch.utils.data.Subset(dataset, list(range(10)))
     
     m=TrainModel.trainandeval()
