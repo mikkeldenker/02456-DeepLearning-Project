@@ -6,10 +6,25 @@ from torchvision.ops import batched_nms
 import cv2
 import numpy as np
 import time
+import os
 
 torch.backends.quantized.engine = 'qnnpack'
 
 THRESH = 0.8
+
+def model_size(model):
+    if os.path.exists('/tmp/model.pth'):
+        os.remove('/tmp/model.pth')
+
+    torch.save(model.state_dict(), '/tmp/model.pth')
+    size = os.path.getsize('/tmp/model.pth')
+
+    if os.path.exists('/tmp/model.pth'):
+        os.remove('/tmp/model.pth')
+
+    return size
+
+
 
 if __name__ == "__main__":
     #model = torch.jit.load("../traced.pth")
@@ -30,7 +45,9 @@ if __name__ == "__main__":
                    rpn_score_thresh=0.2,
                    )
     model.load_state_dict(torch.load("../models/model_v3_small.pth"))
+    print('Model size', model_size(model))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
+    print('Model size (quant)', model_size(model))
     # model = torch.jit.script(model)
     #model.half()
     model.eval()
