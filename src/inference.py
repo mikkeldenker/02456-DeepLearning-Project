@@ -6,9 +6,14 @@ from torchvision.ops import batched_nms
 import cv2
 import numpy as np
 import time
-import os
 
-torch.backends.quantized.engine = 'qnnpack'
+import platform
+if platform.system()=="Windows":
+    torch.backends.quantized.engine = 'fbgemm'
+else:
+    torch.backends.quantized.engine = 'qnnpack'
+
+import os
 
 THRESH = 0.8
 
@@ -42,10 +47,13 @@ if __name__ == "__main__":
                    box_roi_pool=roi_pooler,
                    min_size=220,
                    max_size=220,
-                   rpn_score_thresh=0.2,
+                   rpn_score_thresh=0.001,
                    )
-    model.load_state_dict(torch.load("../models/model_v3_small.pth"))
+
+    model.load_state_dict(torch.load("../models/model_mobilev3_25epoch.pth"))
+
     print('Model size', model_size(model))
+
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
     print('Model size (quant)', model_size(model))
     # model = torch.jit.script(model)
