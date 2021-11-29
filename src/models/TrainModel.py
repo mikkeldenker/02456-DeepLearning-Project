@@ -28,7 +28,7 @@ class trainandeval(object):
         # split the dataset in train and test set
         indices = torch.randperm(len(dataset)).tolist()
         dataset_train = torch.utils.data.Subset(dataset, indices[:int(len(dataset)*(4/5))+1])
-        dataset_val = torch.utils.data.Subset(dataset, indices[int(len(dataset)*(/45))+1:])
+        dataset_val = torch.utils.data.Subset(dataset, indices[int(len(dataset)*(4/5))+1:])
         
         
         # Specify data loaders
@@ -106,16 +106,16 @@ class trainandeval(object):
             train_loss.append(SL)
             # update the learning rate
             lr_scheduler.step()
-            #validation loss
+            # evaluate on the test dataset validation acc
             test_metric=evaluate_mik(model,data_loader_val,epoch,device=device,print_freq=1)
             VL = test_metric.loss.total #total loss
             count = test_metric.loss.count
             VSL = float(VL / count) #single loss or average loss
             val_loss.append(VSL)
             # evaluate on the test dataset validation acc
-            evaluation_result=evaluate(model, data_loader_val, device=device)          
-            test_accuracy = evaluation_result.coco_eval.get("bbox").stats[0]
-            val_acc.append(test_accuracy)
+            # evaluation_result=evaluate(model, data_loader_val, device=device)          
+            # test_accuracy = evaluation_result.coco_eval.get("bbox").stats[0]
+            # val_acc.append(test_accuracy)
             
             print(val_loss)
         with open("val_loss.txt", "wb") as fp:   #Pickling

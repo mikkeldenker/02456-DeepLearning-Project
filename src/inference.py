@@ -6,11 +6,30 @@ from torchvision.ops import batched_nms
 import cv2
 import numpy as np
 import time
+
 import platform
 if platform.system()=="Windows":
     torch.backends.quantized.engine = 'fbgemm'
 else:
     torch.backends.quantized.engine = 'qnnpack'
+
+import os
+
+THRESH = 0.8
+
+def model_size(model):
+    if os.path.exists('/tmp/model.pth'):
+        os.remove('/tmp/model.pth')
+
+    torch.save(model.state_dict(), '/tmp/model.pth')
+    size = os.path.getsize('/tmp/model.pth')
+
+    if os.path.exists('/tmp/model.pth'):
+        os.remove('/tmp/model.pth')
+
+    return size
+
+
 
 if __name__ == "__main__":
     #model = torch.jit.load("../traced.pth")
@@ -30,8 +49,13 @@ if __name__ == "__main__":
                    max_size=220,
                    rpn_score_thresh=0.001,
                    )
+
     model.load_state_dict(torch.load("../models/model_mobilev3_25epoch.pth"))
+
+    print('Model size', model_size(model))
+
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
+    print('Model size (quant)', model_size(model))
     # model = torch.jit.script(model)
     #model.half()
     model.eval()
@@ -78,7 +102,10 @@ if __name__ == "__main__":
             pred = model([tensor])[0]
             frame = frame[:, :, ::-1]
 
-            for i, box in enumerate(pred.get('boxes', [])):
+            for i, (score, box) in enumerate(zip(pred.get('scores', []), pred.get('boxes', []))):
+                if score < THRESH:
+                    continue
+
                 xmin, ymin, xmax, ymax = box
                 xmin = int(xmin)
                 xmax = int(xmax)
