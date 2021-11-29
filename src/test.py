@@ -33,7 +33,7 @@ if __name__ == "__main__":
                        box_roi_pool=roi_pooler,
                        min_size=220,
                        max_size=220,
-                       rpn_score_thresh=0.3,
+                       rpn_score_thresh=0.1,
                        )
     model.load_state_dict(torch.load("../models/model_v3_small.pth"))
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # train_percent = 0.8
     # _, dataset = torch.utils.data.random_split(dataset, [math.ceil(len(dataset)*train_percent), math.floor((1-train_percent)*len(dataset))])
 
-    dataset = ColaBeerDataset('../data/test')
+    dataset = ColaBeerDataset('../data/test', False)
     # dataset = torch.utils.data.Subset(dataset, list(range(0, 500)))
 
     # data for text
