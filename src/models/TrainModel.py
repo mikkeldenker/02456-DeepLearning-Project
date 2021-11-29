@@ -94,9 +94,9 @@ class trainandeval(object):
         
         
         ########## Train the actual model ###############
-        train_loss={}
-        val_loss={}
-        val_acc={}
+        train_loss=[]
+        val_loss=[]
+        val_acc=[]
         for epoch in range(num_epochs):
             # train for one epoch, printing every 10 iterations
             metric_logger=train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=10)
@@ -106,16 +106,17 @@ class trainandeval(object):
             train_loss.append(SL)
             # update the learning rate
             lr_scheduler.step()
-            # evaluate on the test dataset validation acc
-            evaluation_result=evaluate(model, data_loader_val, device=device)          
-            test_accuracy = evaluation_result.coco_eval.get("bbox").stats[0]
-            val_acc.append(test_accuracy)
             #validation loss
             test_metric=evaluate_mik(model,data_loader_val,epoch,device=device,print_freq=1)
             VL = test_metric.loss.total #total loss
             count = test_metric.loss.count
             VSL = float(VL / count) #single loss or average loss
             val_loss.append(VSL)
+            # evaluate on the test dataset validation acc
+            evaluation_result=evaluate(model, data_loader_val, device=device)          
+            test_accuracy = evaluation_result.coco_eval.get("bbox").stats[0]
+            val_acc.append(test_accuracy)
+            
             print(val_loss)
         with open("val_loss.txt", "wb") as fp:   #Pickling
           pickle.dump(val_loss, fp)
