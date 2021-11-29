@@ -84,7 +84,7 @@ def evaluate_mik(model, data_loader, epoch, device, print_freq):
 
         loss_value = losses_reduced.item()
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
-    return loss_value
+    return metric_logger
 
 @torch.inference_mode()
 def evaluate(model, data_loader, device):
