@@ -14,7 +14,8 @@ import os
 
 torch.backends.quantized.engine = 'qnnpack'
 
-THRESH = 0.3
+THRESH = 0.1
+TRACE = True
 
 if __name__ == "__main__":
     backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
@@ -43,6 +44,8 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load("../models/model_resnet50_10epoch.pth"))
 
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
+    if TRACE:
+        model = torch.jit.script(model)
 
     model.eval()
 
@@ -79,9 +82,12 @@ if __name__ == "__main__":
                 fourcc = cv2.VideoWriter_fourcc(*'XVID') # Be sure to use the lower case
                 out = cv2.VideoWriter('output.avi', fourcc, 20, (frame.shape[2], frame.shape[1]))
             
-            tensor = torch.tensor(frame)
+            tensor = frame
 
-            pred = model([tensor])[0]
+            if TRACE:
+                pred = model([tensor])[1][0]
+            else:
+                pred = model([tensor])[0]
             frame = np.array(frame)
             frame = frame.transpose(1, 2, 0)
 
@@ -89,12 +95,15 @@ if __name__ == "__main__":
             boxes = pred.get('boxes', [])
             scores = pred.get('scores', [])
             labels = pred.get('labels', [])
-            iou_thresh = 0.3
-            nms_tensor = nms(boxes, scores, iou_thresh)
 
-            scores = [scores[idx] for idx in nms_tensor]
-            boxes = [boxes[idx] for i, idx in enumerate(nms_tensor) if scores[i] > THRESH]
-            labels = [labels[idx] for i, idx in enumerate(nms_tensor) if scores[i] > THRESH]
+            if len(boxes) > 0:
+                iou_thresh = 0.3
+                nms_tensor = nms(boxes, scores, iou_thresh)
+
+                scores = [scores[idx] for idx in nms_tensor]
+                boxes = [boxes[idx] for i, idx in enumerate(nms_tensor) if scores[i] > THRESH]
+                labels = [labels[idx] for i, idx in enumerate(nms_tensor) if scores[i] > THRESH]
+
             tracker.update(boxes)
 
             frame = (frame*255).astype(np.uint8)
