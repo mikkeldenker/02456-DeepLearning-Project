@@ -3,8 +3,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 with open('inference_speed.json', 'r') as f:
-    deltas = json.loads(f.read())
+    all_deltas = json.loads(f.read())
 
-plt.boxplot(deltas)
-plt.ylabel("Inference Speed (ms)")
+data = []
+labels = []
+for model in all_deltas:
+    deltas = all_deltas[model]
+    data.append(deltas)
+    labels.append(model)
+
+plt.boxplot(data)
+plt.ylabel("Inference Speed (sec)")
+plt.xticks(list(range(1, len(data)+1)), labels)
 plt.show()

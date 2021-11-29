@@ -2,6 +2,7 @@ import torchvision
 import torch
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.ops import nms
 import cv2
 import numpy as np
@@ -13,25 +14,30 @@ import math
 torch.backends.quantized.engine = 'qnnpack'
 
 if __name__ == "__main__":
-    # backbone = torchvision.models.mobilenet_v3_small(pretrained=True).features
-    backbone = torchvision.models.mobilenet_v3_large(pretrained=True).features
-    # backbone.out_channels = 576
-    backbone.out_channels = 960
-    anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
-                                       aspect_ratios=((0.5, 1.0, 2.0),))
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
-                                                    output_size=7,
-                                                    sampling_ratio=2)
-# put the pieces together inside a FasterRCNN model
-    model = FasterRCNN(backbone,
-                       num_classes=3,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler,
-                       min_size=220,
-                       max_size=220,
-                       rpn_score_thresh=0.1,
-                       )
-    model.load_state_dict(torch.load("../model_v3_large.pth"))
+    # backbone = torchvision.models.mobilenet_v3_large(pretrained=True).features
+    # # backbone.out_channels = 576
+    # backbone.out_channels = 960
+    # anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
+    #                                    aspect_ratios=((0.5, 1.0, 2.0),))
+    # roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
+    #                                                 output_size=7,
+    #                                                 sampling_ratio=2)
+# pu# t the pieces together inside a FasterRCNN model
+    # model = FasterRCNN(backbone,
+    #                    num_classes=3,
+    #                    rpn_anchor_generator=anchor_generator,
+    #                    box_roi_pool=roi_pooler,
+    #                    min_size=220,
+    #                    max_size=220,
+    #                    rpn_score_thresh=0.3,
+    #                    )
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    num_classes = 3 # cola and beer + background
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    model.load_state_dict(torch.load("../models/model_resnet50_10epoch.pth"))
+
+    # model.load_state_dict(torch.load("../models/model_v3_large.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
 
     model.eval()
@@ -41,8 +47,8 @@ if __name__ == "__main__":
     # train_percent = 0.8
     # _, dataset = torch.utils.data.random_split(dataset, [math.ceil(len(dataset)*train_percent), math.floor((1-train_percent)*len(dataset))])
 
-    # dataset = torch.utils.data.Subset(dataset, list(range(0, 200)))
-    dataset = ColaBeerDataset('../data/test')
+    dataset = ColaBeerDataset('../data/train')
+    dataset = torch.utils.data.Subset(dataset, list(range(50, 200)))
 
     # data for text
     # Window name in which image is displayed
@@ -58,7 +64,7 @@ if __name__ == "__main__":
     # Line thicknes
     thickness = 2
     out = None
-    tracker = CentroidTracker(20, 100)
+    tracker = CentroidTracker(24, 200)
     with torch.no_grad():
         for frame, _ in dataset:
             t1_start = time.time()
@@ -77,7 +83,7 @@ if __name__ == "__main__":
             boxes = pred.get('boxes', [])
             scores = pred.get('scores', [])
             labels = pred.get('labels', [])
-            iou_thresh = 0.05
+            iou_thresh = 0.3
             nms_tensor = nms(boxes, scores, iou_thresh)
 
             boxes = [boxes[idx] for idx in nms_tensor]

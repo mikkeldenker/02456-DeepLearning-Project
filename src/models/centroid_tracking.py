@@ -72,7 +72,7 @@ class CentroidTracker():
 
 
     def objects(self):
-        return self._tracking_objects.items()
+        return [(k, v) for (k,v) in self._tracking_objects.items() if self._dissapeared[k] == 0]
 
 
 if __name__ == "__main__":

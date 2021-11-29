@@ -27,7 +27,7 @@ if __name__ == "__main__":
                    max_size=220,
                    rpn_score_thresh=0.2,
                    )
-    model.load_state_dict(torch.load("../model_v3.pth"))
+    model.load_state_dict(torch.load("../models/model_v3.pth"))
     model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear, torch.nn.BatchNorm2d})
     # model = torch.jit.script(model)
     #model.half()
